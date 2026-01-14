@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Search, User, Menu, MapPin, Moon, Sun, Palmtree, Trees, Building, Compass, X, Sparkles } from 'lucide-react';
+import { Search, User, Menu, MapPin, Moon, Sun, Palmtree, Trees, Building, Compass, X, Sparkles, Users } from 'lucide-react';
 import { useAuth } from '../services/AuthContext';
 import { useState, useEffect, useRef } from 'react';
 
@@ -24,6 +24,9 @@ const Navbar = () => {
         { id: 7, name: 'Munnar', type: 'Station', sub: 'Rolling Hills', icon: Trees, color: '#10B981' },
     ];
 
+    const [showSidebar, setShowSidebar] = useState(false);
+    const sidebarRef = useRef(null);
+
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark') {
@@ -35,10 +38,13 @@ const Navbar = () => {
             if (searchRef.current && !searchRef.current.contains(event.target)) {
                 setShowResults(false);
             }
+            if (sidebarRef.current && !sidebarRef.current.contains(event.target) && showSidebar) {
+                setShowSidebar(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [showSidebar]);
 
     const toggleTheme = () => {
         const newTheme = !isDark;
@@ -71,8 +77,36 @@ const Navbar = () => {
     const handleSelect = (item) => {
         setSearchQuery(item.name);
         setShowResults(false);
-        navigate('/results');
+        // Stay on map page and animate to location
+        if (window.location.pathname !== '/map') {
+            navigate(`/map?query=${encodeURIComponent(item.name)}`);
+        } else {
+            // If already on map page, just update the URL and let map animate
+            window.history.pushState({}, '', `/map?query=${encodeURIComponent(item.name)}`);
+            window.dispatchEvent(new PopStateEvent('popstate'));
+        }
     };
+
+    const navLinks = {
+        traveler: [
+            { label: 'Explore Destinations', path: '/map', icon: Compass },
+            { label: 'Community', path: '/community', icon: Users },
+            { label: 'My Trips', path: '/trips', icon: MapPin },
+            { label: 'Travel Buddy AI', path: '/voice', icon: Sparkles },
+        ],
+        host: [
+            { label: 'Host Dashboard', path: '/host/dashboard', icon: Building },
+            { label: 'Add New Property', path: '/host/add-property', icon: Palmtree },
+            { label: 'Go to Traveler Mode', path: '/home', icon: Compass },
+        ],
+        organizer: [
+            { label: 'Organizer Dashboard', path: '/organizer/dashboard', icon: Compass },
+            { label: 'Create New Event', path: '/organizer/create-event', icon: Sparkles },
+            { label: 'Go to Traveler Mode', path: '/home', icon: Compass },
+        ]
+    };
+
+    const currentLinks = user ? navLinks[user.role] : navLinks.traveler;
 
     return (
         <nav style={{
@@ -118,6 +152,16 @@ const Navbar = () => {
                             value={searchQuery}
                             onChange={handleSearch}
                             onFocus={() => searchQuery.trim() && setShowResults(true)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    if (window.location.pathname !== '/map') {
+                                        navigate(`/map?query=${encodeURIComponent(searchQuery)}`);
+                                    } else {
+                                        window.history.pushState({}, '', `/map?query=${encodeURIComponent(searchQuery)}`);
+                                        window.dispatchEvent(new PopStateEvent('popstate'));
+                                    }
+                                }
+                            }}
                             style={{ border: 'none', background: 'transparent', outline: 'none', marginLeft: '12px', flex: 1, color: 'var(--text-main)', fontSize: '0.95rem' }}
                         />
                         {searchQuery && (
@@ -125,7 +169,17 @@ const Navbar = () => {
                                 <X size={16} />
                             </button>
                         )}
-                        <button style={{ marginLeft: '8px', background: 'var(--secondary)', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                        <button
+                            onClick={() => {
+                                if (window.location.pathname !== '/map') {
+                                    navigate(`/map?query=${encodeURIComponent(searchQuery)}`);
+                                } else {
+                                    window.history.pushState({}, '', `/map?query=${encodeURIComponent(searchQuery)}`);
+                                    window.dispatchEvent(new PopStateEvent('popstate'));
+                                }
+                            }}
+                            style={{ marginLeft: '8px', background: 'var(--secondary)', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none' }}
+                        >
                             <Search size={18} color="var(--brand-navy)" />
                         </button>
                     </div>
@@ -205,24 +259,110 @@ const Navbar = () => {
                     </div>
 
                     <button
-                        onClick={() => navigate('/login')}
+                        onClick={() => setShowSidebar(!showSidebar)}
                         style={{
                             padding: '8px 16px', borderRadius: '99px', border: '1px solid var(--border)',
                             display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-card)',
-                            cursor: 'pointer'
+                            cursor: 'pointer', zIndex: 1100
                         }}
                     >
                         <Menu size={20} color="var(--text-main)" />
-                        <div style={{ width: '32px', height: '32px', background: 'var(--text-secondary)', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <User size={18} />
+                        <div style={{ width: '32px', height: '32px', background: 'var(--primary)', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                            {user?.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={18} />}
                         </div>
                     </button>
                 </div>
             </div>
+
+            {/* Sidebar Overlay */}
+            {showSidebar && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                    background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 1090
+                }}>
+                    <div ref={sidebarRef} className="sidebar-animate" style={{
+                        position: 'absolute', top: '10px', right: '10px',
+                        width: '320px', background: 'var(--bg-card)', borderRadius: '24px',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.15)', padding: '24px',
+                        border: '1px solid var(--border)'
+                    }}>
+                        {/* Sidebar Header */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px', paddingBottom: '24px', borderBottom: '1px solid var(--border)' }}>
+                            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                {user?.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <User size={24} color="white" />}
+                            </div>
+                            <div>
+                                <h3 style={{ fontSize: '1.2rem', color: 'var(--text-main)', marginBottom: '4px' }}>{user?.name || 'Vibe Traveler'}</h3>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'capitalize', background: 'var(--bg-nav)', padding: '2px 8px', borderRadius: '4px', display: 'inline-block' }}>
+                                    {user?.role || 'Guest'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Menu Items */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {currentLinks.map((link, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => { navigate(link.path); setShowSidebar(false); }}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 16px',
+                                        borderRadius: '12px', border: 'none', background: 'transparent',
+                                        color: 'var(--text-main)', cursor: 'pointer', textAlign: 'left',
+                                        transition: 'background 0.2s', width: '100%'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-nav)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                >
+                                    <link.icon size={20} color="var(--primary)" />
+                                    <span style={{ fontWeight: 600 }}>{link.label}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Quick Settings */}
+                        <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
+                            <button
+                                onClick={toggleTheme}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 16px',
+                                    borderRadius: '12px', border: 'none', background: 'transparent',
+                                    color: 'var(--text-main)', cursor: 'pointer', textAlign: 'left',
+                                    width: '100%'
+                                }}
+                            >
+                                {isDark ? <Sun size={20} color="#F59E0B" /> : <Moon size={20} color="#6366F1" />}
+                                <span style={{ fontWeight: 600 }}>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+                            </button>
+
+                            <button
+                                onClick={() => { auth.logout(); navigate('/login'); setShowSidebar(false); }}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 16px',
+                                    borderRadius: '12px', border: 'none', background: 'rgba(239, 68, 68, 0.05)',
+                                    color: '#EF4444', cursor: 'pointer', textAlign: 'left',
+                                    marginTop: '8px', width: '100%'
+                                }}
+                            >
+                                <Compass size={20} />
+                                <span style={{ fontWeight: 700 }}>Log Out</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <style>{`
                 @keyframes slideInNavbar {
                     from { opacity: 0; transform: translateY(-10px); }
                     to { opacity: 1; transform: translateY(0); }
+                }
+                .sidebar-animate {
+                    animation: sidebarSlide 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                }
+                @keyframes sidebarSlide {
+                    from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
                 }
             `}</style>
         </nav>

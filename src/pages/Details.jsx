@@ -3,11 +3,52 @@ import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import Nav from '../components/Navbar';
-import { ArrowLeft, MapPin, Star, Share, Heart, Wifi, Coffee, Wind, Monitor, ArrowRight } from 'lucide-react';
+import SnapshotVisualization from '../components/SnapshotVisualization';
+import { ArrowLeft, MapPin, Star, Share, Heart, Wifi, Coffee, Wind, Monitor, ArrowRight, Compass } from 'lucide-react';
+import { useState } from 'react';
 
 const Details = () => {
     const navigate = useNavigate();
     const { id } = useParams();
+    const [snapshotData, setSnapshotData] = useState(null);
+
+    useEffect(() => {
+        // Fetch reviews for this stay
+        const fetchReviews = async () => {
+            try {
+                const res = await fetch(`http://localhost:5000/api/reviews/${id || '6968041c226fac2e6145c67c'}`); // Use ID if available, else fallback for demo
+                const reviews = await res.json();
+
+                if (reviews && reviews.length > 0) {
+                    const count = reviews.length;
+                    const avgHome = reviews.reduce((acc, r) => acc + (r.feltLikeHome || 0), 0) / count;
+                    const avgSocial = reviews.reduce((acc, r) => acc + (r.socialLevel || 0), 0) / count;
+                    const avgCulture = reviews.reduce((acc, r) => acc + (r.cultureDepth || 0), 0) / count;
+
+                    // Aggregate tags
+                    const tagFreq = {};
+                    reviews.forEach(r => {
+                        [r.energyTag, r.noiseTag, r.tripType].forEach(t => {
+                            if (t) tagFreq[t] = (tagFreq[t] || 0) + 1;
+                        });
+                    });
+                    const topTags = Object.entries(tagFreq)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 3)
+                        .map(entry => entry[0].replace('_', ' '));
+
+                    setSnapshotData({
+                        stats: { count, feltLikeHome: avgHome, socialLevel: avgSocial, cultureDepth: avgCulture },
+                        headline: reviews[0].headline, // Show latest headline
+                        tags: topTags
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch snapshots", err);
+            }
+        };
+        fetchReviews();
+    }, [id]);
 
     const images = [
         "https://images.unsplash.com/photo-1548013146-72479768bada?w=800",
@@ -75,6 +116,13 @@ const Details = () => {
 
                     {/* LEFT COLUMN */}
                     <div>
+                        {/* Experience Snapshot */}
+                        <SnapshotVisualization
+                            stats={snapshotData?.stats}
+                            headline={snapshotData?.headline}
+                            tags={snapshotData?.tags}
+                        />
+
                         {/* About */}
                         <div style={{ marginBottom: '40px' }}>
                             <h2 style={{ marginBottom: '16px', color: 'var(--primary)' }}>About this Property</h2>
@@ -123,6 +171,12 @@ const Details = () => {
                                 border: '1px solid var(--border)', position: 'relative'
                             }}>
                                 <MapSection apiKey="kq5uSTUgMZBscIAU9tbU" />
+                                <button
+                                    onClick={() => navigate('/map')}
+                                    style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'var(--brand-lime)', color: 'var(--brand-navy)', border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                >
+                                    <Compass size={18} /> View Nearby stays
+                                </button>
                             </div>
                             <p style={{ marginTop: '12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                                 <MapPin size={16} style={{ display: 'inline', marginRight: '4px' }} />

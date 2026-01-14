@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Fort Kochi Homestay",
+    "id": "6968041c226fac2e6145c67c"
+  },
+  {
+    "name": "Kochi Calm Nest",
+    "id": "6968041c226fac2e6145c67d"
+  },
+  {
+    "name": "Kashi Art Hostel",
+    "id": "6968041c226fac2e6145c67e"
+  },
+  {
+    "name": "Anjuna Beach Pad",
+    "id": "6968041c226fac2e6145c67f"
+  },
+  {
+    "name": "Palolem Quiet Stay",
+    "id": "6968041c226fac2e6145c680"
+  },
+  {
+    "name": "Munnar Tea Cottage",
+    "id": "6968041c226fac2e6145c681"
+  }
+]

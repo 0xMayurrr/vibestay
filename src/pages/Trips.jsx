@@ -1,11 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import Navbar from '../components/Navbar';
-import { ArrowLeft, PlayCircle, MapPin, Calendar, Clock, Award } from 'lucide-react';
+import LeaveReview from '../components/LeaveReview';
+import { ArrowLeft, PlayCircle, MapPin, Calendar, Clock, Award, Star } from 'lucide-react';
 
 const Trips = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('upcoming');
+    const [showSnapshotModal, setShowSnapshotModal] = useState(false);
+    const [activeTrip, setActiveTrip] = useState(null);
 
     const upcomingTrips = [
         {
@@ -19,11 +22,18 @@ const Trips = () => {
 
     const pastTrips = [
         {
-            id: 101,
-            title: 'Backpacking in Goa',
+            id: '6968041c226fac2e6145c67f',
+            title: 'Anjuna Beach Pad',
             date: 'Dec 10 - Dec 15, 2025',
             status: 'Completed',
             image: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=800'
+        },
+        {
+            id: '6968041c226fac2e6145c67c',
+            title: 'Fort Kochi Homestay',
+            date: 'Jan 02 - Jan 05, 2026',
+            status: 'Completed',
+            image: 'https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800'
         }
     ];
 
@@ -104,6 +114,34 @@ const Trips = () => {
 
                 {/* List */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '24px', maxWidth: '800px' }}>
+
+                    {/* Prompt for Snapshot if in Past Trips */}
+                    {activeTab === 'past' && pastTrips.length > 0 && (
+                        <div style={{
+                            padding: '24px',
+                            background: 'linear-gradient(135deg, var(--primary) 0%, var(--brand-navy) 100%)',
+                            borderRadius: '20px',
+                            color: 'white',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '16px',
+                            boxShadow: 'var(--shadow-card)'
+                        }}>
+                            <div>
+                                <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>How was your stay at {pastTrips[0].title}?</h3>
+                                <p style={{ fontSize: '0.9rem', opacity: 0.9 }}>Share an Experience Snapshot and get 100 VibePoints!</p>
+                            </div>
+                            <button
+                                onClick={() => { setActiveTrip(pastTrips[0]); setShowSnapshotModal(true); }}
+                                className="btn-primary"
+                                style={{ background: 'white', color: 'var(--primary)', border: 'none' }}
+                            >
+                                Share Vibe
+                            </button>
+                        </div>
+                    )}
+
                     {(activeTab === 'upcoming' ? upcomingTrips : pastTrips).map(trip => (
                         <div key={trip.id} className="card" style={{ display: 'flex', overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px' }}>
                             <div style={{ width: '200px', position: 'relative' }}>
@@ -123,9 +161,18 @@ const Trips = () => {
                                 <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
                                     <Calendar size={18} /> {trip.date}
                                 </p>
-                                <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border)', display: 'flex', gap: '16px' }}>
+                                <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border)', display: 'flex', gap: '16px', alignItems: 'center' }}>
                                     <button style={{ color: 'var(--primary)', fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer' }}>View Ticket</button>
                                     <button style={{ color: 'var(--text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer' }}>Get Directions</button>
+
+                                    {activeTab === 'past' && (
+                                        <button
+                                            onClick={() => { setActiveTrip(trip); setShowSnapshotModal(true); }}
+                                            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', background: 'rgba(var(--primary-rgb), 0.1)', padding: '6px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                                        >
+                                            <Star size={16} fill="var(--primary)" /> Share Snapshot
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -135,6 +182,19 @@ const Trips = () => {
                 </div>
 
             </div>
+
+            {/* Snapshot Modal Overlay */}
+            {showSnapshotModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <div style={{ width: '100%', maxWidth: '600px' }}>
+                        <LeaveReview
+                            onClose={() => setShowSnapshotModal(false)}
+                            propertyId={activeTrip?.id}
+                            propertyName={activeTrip?.title}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

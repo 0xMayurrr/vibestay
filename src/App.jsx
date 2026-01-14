@@ -1,6 +1,4 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Splash from './pages/Splash';
-import Onboarding from './pages/Onboarding';
 import Login from './pages/Login';
 import Home from './pages/Home';
 import HotelHome from './pages/HotelHome';
@@ -14,6 +12,8 @@ import AddProperty from './pages/AddProperty';
 import OrganizerDashboard from './pages/OrganizerDashboard';
 import CreateEvent from './pages/CreateEvent';
 import MapDiscovery from './pages/MapDiscovery';
+import StoriesVibes from './pages/StoriesVibes';
+import Community from './pages/Community';
 import SearchDemo from './pages/SearchDemo';
 
 function App() {
@@ -22,7 +22,6 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/search-demo" element={<SearchDemo />} />
-        <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/login" element={<Login />} />
 
         {/* Traveler Routes */}
@@ -32,7 +31,8 @@ function App() {
         <Route path="/details/:id" element={<Details />} />
         <Route path="/trips" element={<Trips />} />
         <Route path="/map" element={<MapDiscovery />} />
-        <Route path="/traveler/events" element={<Home />} /> {/* Reuse Home for demo or make new page */}
+        <Route path="/community" element={<Community />} />
+        <Route path="/traveler/events" element={<Home />} />
 
         {/* Host Routes */}
         <Route path="/host/dashboard" element={<HostDashboard />} />

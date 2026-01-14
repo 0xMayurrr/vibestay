@@ -56,7 +56,7 @@ const SearchBar = ({ onSearch }) => {
         setQuery(item.name);
         setShowResults(false);
         if (onSearch) onSearch(item);
-        else navigate('/results'); // Fallback demo behavior
+        else navigate(`/map?query=${encodeURIComponent(item.name)}`); // Go to map page
     };
 
     return (
@@ -104,7 +104,11 @@ const SearchBar = ({ onSearch }) => {
                 )}
 
                 <button
-                    onClick={() => query.trim() && navigate('/results')}
+                    onClick={() => {
+                        if (query.trim()) {
+                            navigate(`/map?query=${encodeURIComponent(query.trim())}`);
+                        }
+                    }}
                     style={{
                         background: 'var(--brand-navy)',
                         color: 'white',

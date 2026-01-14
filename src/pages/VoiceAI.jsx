@@ -9,8 +9,17 @@ const VoiceAI = () => {
     const [isListening, setIsListening] = useState(false);
     const [isThinking, setIsThinking] = useState(false);
     const [role, setRole] = useState('traveler');
+    const [lang, setLang] = useState('en-IN'); // Default to Indian English
     const [conversation, setConversation] = useState([]);
     const [transcript, setTranscript] = useState('');
+
+    const languages = [
+        { name: 'English', code: 'en-IN' },
+        { name: 'Malayalam', code: 'ml-IN' },
+        { name: 'Hindi', code: 'hi-IN' },
+        { name: 'Tamil', code: 'ta-IN' },
+        { name: 'Kannada', code: 'kn-IN' }
+    ];
     const bottomRef = useRef(null);
     const recognitionRef = useRef(null);
 
@@ -38,19 +47,27 @@ const VoiceAI = () => {
         };
 
         recognition.onresult = (event) => {
+            console.log('Speech recognition result:', event);
             const final = event.results[0][0].transcript;
+            console.log('Transcript:', final);
             setTranscript(final);
-            handleSubmission(final);
+            // Process immediately when we get the result
+            if (final && final.trim().length > 2) {
+                handleSubmission(final);
+            }
         };
 
         recognition.onerror = (event) => {
             console.error("Mic Error:", event.error);
             setIsListening(false);
+            setTranscript('');
 
             if (event.error === 'network') {
                 const networkErr = "I'm having trouble reaching my voice servers. Please check your internet or try again in a moment.";
                 setConversation(prev => [...prev, { type: 'bot', text: networkErr }]);
-                speak(networkErr);
+                if ('speechSynthesis' in window) {
+                    speak(networkErr);
+                }
             }
 
             if (event.error === 'not-allowed') {
@@ -59,28 +76,44 @@ const VoiceAI = () => {
         };
 
         recognition.onend = () => {
+            console.log('Speech recognition ended');
             setIsListening(false);
-            // If the recognition ended but we have a good transcript, submit it
-            setTranscript(prev => {
-                const clean = prev.trim();
-                if (clean.length > 2 && !isThinking) {
-                    handleSubmission(clean);
-                }
-                return prev;
-            });
         };
 
         recognitionRef.current = recognition;
     }, []);
 
     const speak = (text) => {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new window.SpeechSynthesisUtterance(text);
-            utterance.pitch = 1.1;
-            utterance.rate = 1;
-            window.speechSynthesis.speak(utterance);
+        if (!('speechSynthesis' in window)) {
+            console.error("Speech Synthesis not supported");
+            return;
         }
+
+        // Stop any current speech
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+
+        // Find a voice that matches the current language
+        // This is crucial for speaking Malayalam, Hindi, etc properly
+        const voices = window.speechSynthesis.getVoices();
+        const voice = voices.find(v => v.lang.startsWith(lang.split('-')[0])) || voices[0];
+
+        if (voice) utterance.voice = voice;
+        utterance.lang = lang;
+        utterance.pitch = 1.0;
+        utterance.rate = 1.0;
+        utterance.volume = 1.0;
+
+        console.log(`Speaking in ${lang}: ${text}`);
+        window.speechSynthesis.speak(utterance);
+    };
+
+    // Chrome/Safari often block speech until a user clicks something.
+    // We already have the mic button, which acts as the 'unlock' gesture.
+    const unlockAudio = () => {
+        const silent = new SpeechSynthesisUtterance("");
+        window.speechSynthesis.speak(silent);
     };
 
     const [showTextFallback, setShowTextFallback] = useState(false);
@@ -88,23 +121,55 @@ const VoiceAI = () => {
 
     const handleSubmission = async (text) => {
         if (!text || !text.trim()) return;
+        
+        console.log('Handling submission:', text);
         setIsThinking(true);
         setShowTextFallback(false);
 
-        setConversation(prev => [...prev, { type: 'user', text: text }]);
+        const userMessage = { type: 'user', text: text };
+        setConversation(prev => [...prev, userMessage]);
 
         try {
-            const response = await handleVoiceQuery(text, { role, city: 'Kochi' });
+            // Passing THE WHOLE CONVERSATION HISTORY so AI has memory
+            const history = conversation.map(msg => ({
+                role: msg.type === 'user' ? 'user' : 'model',
+                text: msg.text
+            }));
+
+            console.log('Calling AI service...');
+            const response = await handleVoiceQuery(text, {
+                role,
+                city: 'Kochi',
+                language: languages.find(l => l.code === lang)?.name || 'English',
+                history: history
+            });
+            
+            console.log('AI Response:', response);
+            
+            // Ensure response has required properties
+            const safeResponse = {
+                speechText: response?.speechText || 'I got your message!',
+                cards: Array.isArray(response?.cards) ? response.cards : []
+            };
+            
             setConversation(prev => [...prev, {
                 type: 'bot',
-                text: response.speechText,
-                cards: response.cards
+                text: safeResponse.speechText,
+                cards: safeResponse.cards
             }]);
-            speak(response.speechText);
+            
+            // Only speak if speech synthesis is available
+            if ('speechSynthesis' in window && safeResponse.speechText) {
+                speak(safeResponse.speechText);
+            }
         } catch (error) {
-            const err = "I'm having trouble connecting to my brain right now.";
+            console.error('AI Error:', error);
+            const err = "I'm having trouble connecting to my brain right now. Let me try again!";
             setConversation(prev => [...prev, { type: 'bot', text: err }]);
-            speak(err);
+            
+            if ('speechSynthesis' in window) {
+                speak(err);
+            }
         } finally {
             setIsThinking(false);
             setTranscript('');
@@ -113,6 +178,7 @@ const VoiceAI = () => {
     };
 
     const toggleListening = () => {
+        unlockAudio(); // Critical for mobile/chrome audio activation
         if (isListening) {
             recognitionRef.current?.stop();
         } else {
@@ -122,40 +188,38 @@ const VoiceAI = () => {
                 const recognition = new SpeechRecognition();
                 recognition.continuous = false;
                 recognition.interimResults = false;
-                recognition.lang = 'en-US'; // Using US as it is often more stable on Google servers
+                recognition.lang = lang; // Use selected language (Malayalam, Hindi, etc.)
 
                 recognition.onstart = () => {
                     setIsListening(true);
                     setTranscript("Listening...");
                 };
                 recognition.onresult = (event) => {
+                    console.log('New recognition result:', event);
                     const final = event.results[0][0].transcript;
+                    console.log('New transcript:', final);
                     setTranscript(final);
-                    handleSubmission(final);
+                    // Process immediately when we get the result
+                    if (final && final.trim().length > 2) {
+                        handleSubmission(final);
+                    }
                 };
                 recognition.onerror = (event) => {
                     console.error("Mic Error:", event.error);
                     setIsListening(false);
+                    setTranscript('');
                     if (event.error === 'network') {
                         setShowTextFallback(true);
-                        const networkErr = "I'm having trouble reaching my voice servers. Please check your internet or try again in a moment.";
+                        const networkErr = "I'm having trouble reaching my voice servers. Please check your internet.";
                         setConversation(prev => [...prev, { type: 'bot', text: networkErr }]);
-                        speak(networkErr);
-                    }
-                    if (event.error === 'not-allowed') {
-                        alert("Please allow Microphone access in your browser settings.");
+                        if ('speechSynthesis' in window) {
+                            speak(networkErr);
+                        }
                     }
                 };
                 recognition.onend = () => {
+                    console.log('New recognition ended');
                     setIsListening(false);
-                    setTranscript(prev => {
-                        const clean = prev.trim();
-                        if (clean.length > 2 && !isThinking) {
-                            // This part is now redundant if onresult always calls handleSubmission
-                            // but keeping it for now to match original logic flow if onresult is skipped.
-                        }
-                        return prev;
-                    });
                 };
 
                 recognitionRef.current = recognition; // Update ref to the new recognition instance
@@ -179,11 +243,22 @@ const VoiceAI = () => {
                         <div style={{ fontSize: '0.75rem', opacity: 0.7, textTransform: 'uppercase' }}>{role} Mode</div>
                     </div>
                 </div>
-                <select value={role} onChange={(e) => setRole(e.target.value)} style={{ padding: '6px 12px', borderRadius: '8px' }}>
-                    <option value="traveler">Traveler</option>
-                    <option value="host">Host</option>
-                    <option value="organizer">Organizer</option>
-                </select>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <select
+                        value={lang}
+                        onChange={(e) => setLang(e.target.value)}
+                        style={{ padding: '6px 12px', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border)', fontSize: '0.8rem' }}
+                    >
+                        {languages.map(l => (
+                            <option key={l.code} value={l.code}>{l.name}</option>
+                        ))}
+                    </select>
+                    <select value={role} onChange={(e) => setRole(e.target.value)} style={{ padding: '6px 12px', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border)', fontSize: '0.8rem' }}>
+                        <option value="traveler">Traveler</option>
+                        <option value="host">Host</option>
+                        <option value="organizer">Organizer</option>
+                    </select>
+                </div>
             </header>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px', paddingBottom: '220px' }}>
@@ -205,13 +280,25 @@ const VoiceAI = () => {
                             boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                             maxWidth: '80%'
                         }}>
-                            {msg.text}
+                            {msg.text || 'Processing...'}
                         </div>
-                        {msg.cards && msg.cards.map((card, ci) => (
-                            <div key={ci} style={{ marginTop: '16px', textAlign: 'left' }}>
-                                {card.type === 'STAY_LIST' && card.data.map(p => <PropertyCard key={p.id} property={p} />)}
-                            </div>
-                        ))}
+                        {msg.cards && Array.isArray(msg.cards) && msg.cards.map((card, ci) => {
+                            try {
+                                return (
+                                    <div key={ci} style={{ marginTop: '16px', textAlign: 'left' }}>
+                                        {card.type === 'STAY_LIST' && card.data && Array.isArray(card.data) && card.data.map(p => {
+                                            if (p && p.id) {
+                                                return <PropertyCard key={p.id} property={p} />;
+                                            }
+                                            return null;
+                                        })}
+                                    </div>
+                                );
+                            } catch (error) {
+                                console.error('Card render error:', error);
+                                return null;
+                            }
+                        })}
                     </div>
                 ))}
 

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { User, Property, Booking, Event } = require('./models');
+const { User, Property, Booking, Event, Review } = require('./models');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'vibestay_secret_2026';
 
@@ -67,6 +67,7 @@ router.get('/stays', async (req, res) => {
     } catch (err) { res.status(500).send('Server error'); }
 });
 
+
 router.post('/stays', [auth, checkRole('host')], async (req, res) => {
     try {
         const newStay = new Property({ ...req.body, hostId: req.user.id });
@@ -74,6 +75,36 @@ router.post('/stays', [auth, checkRole('host')], async (req, res) => {
         res.json(stay);
     } catch (err) { res.status(500).send('Server error'); }
 });
+
+// Get all properties (for map and listings)
+router.get('/properties', async (req, res) => {
+    try {
+        const properties = await Property.find().populate('hostId', 'name');
+        res.json(properties);
+    } catch (err) { res.status(500).send('Server error'); }
+});
+
+// Get single property by ID
+router.get('/properties/:id', async (req, res) => {
+    try {
+        const property = await Property.findById(req.params.id).populate('hostId', 'name');
+        if (!property) return res.status(404).json({ msg: 'Property not found' });
+        res.json(property);
+    } catch (err) { res.status(500).send('Server error'); }
+});
+
+// Get community stories (reviews with snapshots)
+router.get('/community/stories', async (req, res) => {
+    try {
+        const reviews = await Review.find()
+            .populate('propertyId', 'name city')
+            .populate('authorId', 'name')
+            .sort({ createdAt: -1 })
+            .limit(20);
+        res.json(reviews);
+    } catch (err) { res.status(500).send('Server error'); }
+});
+
 
 // --- BOOKINGS ENDPOINTS ---
 router.post('/bookings', auth, async (req, res) => {
@@ -107,6 +138,24 @@ router.post('/events', [auth, checkRole('organizer')], async (req, res) => {
         const newEvent = new Event({ ...req.body, organizerId: req.user.id });
         const event = await newEvent.save();
         res.json(event);
+    } catch (err) { res.status(500).send('Server error'); }
+});
+
+// --- REVIEWS ENDPOINTS ---
+router.post('/reviews', async (req, res) => {
+    try {
+        // Fallback for authorId if auth is skipped
+        const authorId = req.user ? req.user.id : "65a5e3e8f8f8f8f8f8f00001";
+        const newReview = new Review({ ...req.body, authorId });
+        const review = await newReview.save();
+        res.json(review);
+    } catch (err) { res.status(500).send('Server error'); }
+});
+
+router.get('/reviews/:propertyId', async (req, res) => {
+    try {
+        const reviews = await Review.find({ propertyId: req.params.propertyId }).populate('authorId', 'name');
+        res.json(reviews);
     } catch (err) { res.status(500).send('Server error'); }
 });
 

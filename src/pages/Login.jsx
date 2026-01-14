@@ -55,6 +55,7 @@ const Login = () => {
         e.preventDefault();
         const enteredOtp = otp.join('');
         if (enteredOtp === generatedOtp) {
+            // Skip user onboarding, go directly to role selection
             setView('role');
         } else {
             alert('Invalid OTP. Please try again.');
