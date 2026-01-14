@@ -1,0 +1,235 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Nanum+Pen+Script&display=swap');
+
+:root {
+  /* --- LIGHT THEME (Default) --- */
+  --brand-navy: #0C1E3D;
+  --brand-lime: #D2F399;
+
+  --primary: #0C1E3D;
+  /* Navy Headings */
+  --secondary: #D2F399;
+  /* Lime Accents */
+
+  --bg-main: #F7F9F4;
+  /* Cream/White */
+  --bg-card: #FFFFFF;
+  --bg-nav: rgba(255, 255, 255, 0.9);
+
+  --text-main: #0C1E3D;
+  --text-secondary: #4A5568;
+  --text-muted: #718096;
+  --text-inverse: #FFFFFF;
+
+  --border: #E2E8F0;
+
+  --shadow-card: 0 4px 6px rgba(0, 0, 0, 0.05);
+
+  /* Common Tokens */
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Outfit', sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 9999px;
+
+  --max-width: 1200px;
+}
+
+/* --- DARK THEME OVERRIDES --- */
+body.dark-mode {
+  --primary: #FFFFFF;
+  --secondary: #D2F399;
+
+  --bg-main: #111827;
+  /* Dark Slate aka 'Black' feel */
+  --bg-card: #1E293B;
+  /* Slightly lighter slate */
+  --bg-nav: rgba(17, 24, 39, 0.9);
+
+  --text-main: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --text-inverse: #0C1E3D;
+
+  --border: #334155;
+
+  --shadow-card: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  color: var(--primary);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+/* --- Container & Layout --- */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.web-layout {
+  min-height: 100vh;
+  padding-top: 80px;
+  background-color: var(--bg-main) !important;
+  transition: background-color 0.3s ease;
+}
+
+/* --- Components --- */
+.btn-primary {
+  background: var(--brand-navy);
+  /* Default Light Mode: Navy Button */
+  color: white;
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* In Dark Mode, Primary Buttons are Lime */
+body.dark-mode .btn-primary {
+  background: var(--brand-lime);
+  color: var(--brand-navy);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-main);
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  transition: all 0.2s;
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-card);
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  color: var(--text-main);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Inputs */
+.input-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+}
+
+.search-bar-container {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.input-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.input-field {
+  outline: none;
+  border: none;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-main);
+  width: 100%;
+  background: transparent;
+}
+
+.input-field::placeholder {
+  color: var(--text-muted);
+}
+
+/* Grid Systems */
+.grid-cols-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.grid-cols-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.grid-cols-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+
+  .grid-cols-3,
+  .grid-cols-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .web-hide-mobile {
+    display: none !important;
+  }
+}
+
+/* Utilities */
+.text-lime {
+  color: var(--brand-lime);
+}
+
+.text-navy {
+  color: var(--brand-navy);
+}
+
+.bg-navy {
+  background-color: var(--brand-navy);
+}
+
+.bg-lime {
+  background-color: var(--brand-lime);
+}
